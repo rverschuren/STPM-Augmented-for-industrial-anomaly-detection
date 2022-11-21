@@ -1,0 +1,25 @@
+{
+	"name": "STPM Unet",
+
+	// **Note**  Depending on the development environment, select the right image.
+	// If on yonsei servers, use the py38 to use GPU's. If locally on your computer,
+	// you should think using the lighter CPU version.
+	"image": "ufoym/deepo:pytorch-py38-cpu", // Size: 530.18 MB
+	//"image": "ufoym/deepo:pytorch-py38", // size: 5.86 GB
+	
+	"runArgs": [
+        "--env-file", "${localWorkspaceFolder}/.env"
+    ],
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [8888],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "pip install -r requirements.txt"
+
+	// Configure tool-specific properties.
+	// "customizations": {},
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}
