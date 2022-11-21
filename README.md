@@ -12,6 +12,14 @@ Related paper: https://arxiv.org/pdf/1812.00249.pdf
 The `.devcontainer` folder in the repository allows to create a development environment that allows compatibility when using the project on yonsei's servers or locally. There are three ways to run the code. Use Visual Studio Code as editor.
 > Note: the first time that you start the container is slower. It has to download the image and the python requirements and cache them.
 
+### GPU or CPU ? 
+Look at these two lines in the file `.devcontainer.devcontainer.json` :
+```
+"image": "ufoym/deepo:pytorch-py38-cpu", // Size: 530.18 MB
+//"image": "ufoym/deepo:pytorch-py38", // size: 5.86 GB
+```
+Comment the right line depending on the your setup. If you want to use your GPU (which is necessary for training) it will takes more time to download the image, but then it is cached on your computer.
+
 ### Running in Github Codespaces.
 Simply click on the following button:
 
@@ -44,3 +52,6 @@ Replace `NAME` with the data you want (example "carpet"). Too see the data use t
 ```
 python train_resnet.py --phase train --dataset_path data --category bottle
 ```
+
+### WandB
+When running the code, it will automatically ask you to connect to your WandB account (you have to create one). And then you can observe the metrics on the project's page: [https://wandb.ai/stpm-unet/STPM/runs](https://wandb.ai/stpm-unet/STPM/runs)

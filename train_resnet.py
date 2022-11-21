@@ -26,6 +26,7 @@ import pytorch_lightning as pl
 import string
 import random
 from sklearn.metrics import confusion_matrix
+from pytorch_lightning.loggers import WandbLogger
 
 def copy_files(src, dst, ignores=[]):
     src_files = os.listdir(src)
@@ -41,13 +42,14 @@ def copy_files(src, dst, ignores=[]):
             copy_files(full_file_name, os.path.join(dst, file_name), ignores)
 
 def prep_dirs(root):
+    # TODO: We could delete this part. 
     # make sample dir
     sample_path = os.path.join(root, 'sample')
     os.makedirs(sample_path, exist_ok=True)
     # make source code record dir & copy
     source_code_save_path = os.path.join(root, 'src')
     os.makedirs(source_code_save_path, exist_ok=True)
-    copy_files('./', source_code_save_path, ['.git','.vscode','__pycache__','logs','README','samples','LICENSE']) # copy source code
+    copy_files('./', source_code_save_path, ['.git','.vscode','__pycache__','logs','README','samples','LICENSE', 'data']) # copy source code
     return sample_path, source_code_save_path
 
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
@@ -313,10 +315,12 @@ class STPM(pl.LightningModule):
 
     def on_train_start(self):
         self.model_t.eval() # to stop running_var move (maybe not critical)
-        self.sample_path, self.source_code_save_path = prep_dirs(self.logger.log_dir)
+        shutil.copy("train_resnet.py", self.logger.save_dir)
+        #self.sample_path, self.source_code_save_path = prep_dirs(self.logger.save_dir)
     
     def on_test_start(self):
-        self.sample_path, self.source_code_save_path = prep_dirs(self.logger.log_dir)
+        #self.sample_path, self.source_code_save_path = prep_dirs(self.logger.save_dir)
+        shutil.copy("train_resnet.py", self.logger.save_dir)
 
     def training_step(self, batch, batch_idx):
         x, _, _, file_name, _ = batch
@@ -374,8 +378,8 @@ class STPM(pl.LightningModule):
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
     parser.add_argument('--phase', choices=['train','test'], default='train')
-    parser.add_argument('--dataset_path', default=r'/home/changwoo/hdd/datasets/mvtec_anomaly_detection') #/tile') #'D:\Dataset\REVIEW_BOE_HKC_WHTM\REVIEW_for_anomaly\HKC'
-    parser.add_argument('--category', default='capsule')
+    parser.add_argument('--dataset_path', default=r'data') #/tile') #'D:\Dataset\REVIEW_BOE_HKC_WHTM\REVIEW_for_anomaly\HKC'
+    parser.add_argument('--category', default='carpet')
     parser.add_argument('--num_epochs', default=100)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--momentum', default=0.9)
@@ -383,7 +387,7 @@ def get_args():
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--load_size', default=256) # 256
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default=r'/home/changwoo/hdd/project_results/STPM_lightning/210621') #210605') #
+    parser.add_argument('--project_path', default=r'') #210605') # TODO: what is it for ?
     parser.add_argument('--save_src_code', default=True)
     parser.add_argument('--save_anomaly_map', default=True)
     parser.add_argument('--amap_mode', choices=['mul','sum'], default='mul')
@@ -394,10 +398,12 @@ def get_args():
 
 if __name__ == '__main__':
 
+    wandb_logger = WandbLogger(project="STPM", entity="stpm-unet")
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args = get_args()
     
-    trainer = pl.Trainer.from_argparse_args(args, default_root_dir=os.path.join(args.project_path, args.category), max_epochs=args.num_epochs, gpus=1) #, check_val_every_n_epoch=args.val_freq,  num_sanity_val_steps=0) # ,fast_dev_run=True)
+    trainer = pl.Trainer.from_argparse_args(args, default_root_dir=os.path.join(args.project_path, args.category), max_epochs=args.num_epochs, gpus=1, logger=wandb_logger) #, check_val_every_n_epoch=args.val_freq,  num_sanity_val_steps=0) # ,fast_dev_run=True)
     
     if args.phase == 'train':
         model = STPM(hparams=args)
