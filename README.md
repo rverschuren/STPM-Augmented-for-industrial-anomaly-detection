@@ -38,3 +38,9 @@ To download a subset of the dataset, run the following python code.
 python download_data.py --categ NAME
 ```
 Replace `NAME` with the data you want (example "carpet"). Too see the data use the "--help" argument.
+
+## Usage
+
+```
+python train_resnet.py --phase train --dataset_path data --category bottle
+```
