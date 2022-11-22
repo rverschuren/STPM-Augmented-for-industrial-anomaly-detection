@@ -28,6 +28,7 @@ import random
 from sklearn.metrics import confusion_matrix
 from pytorch_lightning.loggers import WandbLogger
 
+# TODO: I don't think we need this function.
 def copy_files(src, dst, ignores=[]):
     src_files = os.listdir(src)
     for file_name in src_files:
@@ -41,6 +42,7 @@ def copy_files(src, dst, ignores=[]):
             os.makedirs(os.path.join(dst, file_name), exist_ok=True)
             copy_files(full_file_name, os.path.join(dst, file_name), ignores)
 
+# TODO: I don't think we need this function.
 def prep_dirs(root):
     # TODO: We could delete this part. 
     # make sample dir
@@ -198,7 +200,7 @@ class STPM(pl.LightningModule):
         def hook_s(module, input, output):
             self.features_s.append(output)
 
-        self.model_t = resnet18(pretrained=True).eval()
+        self.model_t = resnet18(weights='ResNet18_Weights.DEFAULT').eval()
         for param in self.model_t.parameters():
             param.requires_grad = False
 
@@ -206,7 +208,7 @@ class STPM(pl.LightningModule):
         self.model_t.layer2[-1].register_forward_hook(hook_t)
         self.model_t.layer3[-1].register_forward_hook(hook_t)
 
-        self.model_s = resnet18(pretrained=False) # default: False
+        self.model_s = resnet18(weights=None) # default: False
         # self.model_s.apply(init_weights)
         self.model_s.layer1[-1].register_forward_hook(hook_s)
         self.model_s.layer2[-1].register_forward_hook(hook_s)
@@ -221,7 +223,7 @@ class STPM(pl.LightningModule):
         self.img_path_list = []
 
         self.data_transforms = transforms.Compose([
-                        transforms.Resize((args.load_size, args.load_size), Image.ANTIALIAS),
+                        transforms.Resize((args.load_size, args.load_size), transforms.InterpolationMode.LANCZOS),
                         transforms.ToTensor(),
                         transforms.CenterCrop(args.input_size),
                         transforms.Normalize(mean=mean_train,
@@ -305,28 +307,32 @@ class STPM(pl.LightningModule):
 
     def train_dataloader(self):
         image_datasets = MVTecDataset(root=os.path.join(args.dataset_path,args.category), transform=self.data_transforms, input_size=args.load_size, phase='train')
-        train_loader = DataLoader(image_datasets, batch_size=args.batch_size, shuffle=True, num_workers=0) #, pin_memory=True)
+        train_loader = DataLoader(image_datasets, batch_size=args.batch_size, shuffle=True, num_workers=4) #, pin_memory=True)
         return train_loader
 
     def test_dataloader(self):
         test_datasets = MVTecDataset(root=os.path.join(args.dataset_path,args.category), transform=self.data_transforms, input_size=args.load_size, phase='test')
-        test_loader = DataLoader(test_datasets, batch_size=1, shuffle=False, num_workers=0) #, pin_memory=True) # only work on batch_size=1, now.
+        test_loader = DataLoader(test_datasets, batch_size=1, shuffle=False, num_workers=4) #, pin_memory=True) # only work on batch_size=1, now.
         return test_loader
 
     def on_train_start(self):
         self.model_t.eval() # to stop running_var move (maybe not critical)
-        shutil.copy("train_resnet.py", self.logger.save_dir)
+        #shutil.copy("train_resnet.py", self.logger.save_dir)
         #self.sample_path, self.source_code_save_path = prep_dirs(self.logger.save_dir)
+        self.sample_path = 'sample'
+        os.makedirs(self.sample_path, exist_ok=True)
     
     def on_test_start(self):
         #self.sample_path, self.source_code_save_path = prep_dirs(self.logger.save_dir)
-        shutil.copy("train_resnet.py", self.logger.save_dir)
+        #shutil.copy("train_resnet.py", self.logger.save_dir)
+        self.sample_path = "sample"
+        os.makedirs(self.sample_path, exist_ok=True)
 
     def training_step(self, batch, batch_idx):
         x, _, _, file_name, _ = batch
         features_t, features_s = self(x)
         loss = self.cal_loss(features_s, features_t)
-        self.log('train_loss', loss, on_epoch=True)
+        self.log('train_loss', loss, on_epoch=True, batch_size=args.batch_size)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -403,7 +409,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args = get_args()
     
-    trainer = pl.Trainer.from_argparse_args(args, default_root_dir=os.path.join(args.project_path, args.category), max_epochs=args.num_epochs, gpus=1, logger=wandb_logger) #, check_val_every_n_epoch=args.val_freq,  num_sanity_val_steps=0) # ,fast_dev_run=True)
+    trainer = pl.Trainer.from_argparse_args(args, default_root_dir=os.path.join(args.project_path, args.category), max_epochs=args.num_epochs, accelerator='gpu', devices=1,  logger=wandb_logger) #, check_val_every_n_epoch=args.val_freq,  num_sanity_val_steps=0) # ,fast_dev_run=True)
     
     if args.phase == 'train':
         model = STPM(hparams=args)
