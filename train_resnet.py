@@ -28,7 +28,6 @@ import random
 from sklearn.metrics import confusion_matrix
 from pytorch_lightning.loggers import WandbLogger
 
-# TODO: I don't think we need this function.
 def copy_files(src, dst, ignores=[]):
     src_files = os.listdir(src)
     for file_name in src_files:
@@ -42,7 +41,6 @@ def copy_files(src, dst, ignores=[]):
             os.makedirs(os.path.join(dst, file_name), exist_ok=True)
             copy_files(full_file_name, os.path.join(dst, file_name), ignores)
 
-# TODO: I don't think we need this function.
 def prep_dirs(root):
     # TODO: We could delete this part. 
     # make sample dir
@@ -376,7 +374,7 @@ class STPM(pl.LightningModule):
         # thresholding
         cal_confusion_matrix(self.gt_list_img_lvl, self.pred_list_img_lvl, img_path_list = self.img_path_list, thresh = 0.00097)
         print()
-        with open(args.project_path + r'/results.txt', 'a') as f:
+        with open(args.project_path + r'results.txt', 'a') as f:
             f.write(self.logger.log_dir + '\n')
             f.write(args.category + ' : ' + str(values) + '\n')
 
