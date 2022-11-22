@@ -38,6 +38,19 @@ Simply click on the following button:
 
 [More info](https://code.visualstudio.com/docs/devcontainers/create-dev-container)
 
+### Using conda
+Another way to create the environment is to use conda. For example, when training the model on [AWS Sagemaker Studio Lab](studiolab.sagemaker.aws) (for free) then you can't launch the devcontainer.  They only use JupyterLab as user interface and we need VSCode to use the devcontainers. The solution is to create a conda env by running the following command:
+
+```
+conda env create -f conda_env.yml
+```
+
+and then,
+
+```
+conda activate stpm
+```
+
 ## Downloading the dataset.
 The dataset is directly downloaded from the link found on the [**MVTEC site**](https://www.mvtec.com/company/research/datasets/mvtec-ad/).
 
@@ -50,8 +63,14 @@ Replace `NAME` with the data you want (example "carpet"). Too see the data use t
 ## Usage
 
 ```
-python train_resnet.py --phase train --dataset_path data --category bottle
+python train_resnet.py --phase train --category bottle
 ```
+
+> I tested and it takes approx. 7 min to train the model with Tesla T4 GPU on AWS Sagemaker Studio Lab.
+
+
 
 ### WandB
 When running the code, it will automatically ask you to connect to your WandB account (you have to create one). And then you can observe the metrics on the project's page: [https://wandb.ai/stpm-unet/STPM/runs](https://wandb.ai/stpm-unet/STPM/runs)
+
+WandB also keeps the source code of the run. So, if we want to see an old model and the code related to it, we can obtain it using the WandB website.
