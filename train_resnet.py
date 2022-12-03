@@ -11,6 +11,7 @@ import torch
 from torch.nn import functional as F
 from torch import nn
 from torchvision import transforms, datasets
+from torchvision.utils import make_grid
 from torch.utils.data import Dataset, DataLoader
 import cv2
 import numpy as np
@@ -19,7 +20,6 @@ import glob
 import shutil
 import time
 from torchvision.models import resnet18
-from torchvision.models import resnet34
 from PIL import Image
 from sklearn.metrics import roc_auc_score
 from torch import nn
@@ -28,6 +28,12 @@ import string
 import random
 from sklearn.metrics import confusion_matrix
 from pytorch_lightning.loggers import WandbLogger
+####
+import matplotlib.pyplot as plt
+from kornia import image_to_tensor, tensor_to_image
+from kornia.augmentation import RandomBoxBlur, Normalize, RandomAffine
+from torch import Tensor
+####
 
 def copy_files(src, dst, ignores=[]):
     src_files = os.listdir(src)
@@ -58,10 +64,12 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
 
 def auto_select_weights_file(weights_file_version):
     print()
-    version_list = glob.glob(os.path.join(args.project_path, args.category) + '/lightning_logs/version_*')
+    print(weights_file_version)
+    version_list = glob.glob(args.project_path + '/STPM/')
+    print(version_list)
     version_list.sort(reverse=True, key=lambda x: os.path.getmtime(x))
     if weights_file_version != None:
-        version_list = [os.path.join(args.project_path, args.category) + '/lightning_logs/' + weights_file_version] + version_list
+        version_list = [args.project_path + '/STPM/' + weights_file_version]
     for i in range(len(version_list)):
         # if os.path.exists(os.path.join(version_list[i],'checkpoints')):
         weights_file_path = glob.glob(os.path.join(version_list[i],'checkpoints')+'/*')
@@ -83,6 +91,28 @@ def auto_select_weights_file(weights_file_version):
 #imagenet
 mean_train = [0.485, 0.456, 0.406]
 std_train = [0.229, 0.224, 0.225]
+
+
+class DataAugmentation(nn.Module):
+    """Module to perform data augmentation using Kornia on torch tensors."""
+
+    def __init__(self, apply_color_jitter: bool = False) -> None:
+        super().__init__()
+        self._apply_color_jitter = apply_color_jitter
+
+        self.transforms = nn.Sequential(
+            RandomBoxBlur(kernel_size=(3, 3), border_type='reflect', p=0.75),
+            RandomAffine(degrees=45.0, scale=(1,2), padding_mode=2, p=.75),
+            Normalize(mean=mean_train, std=std_train)
+        )
+
+    @torch.no_grad()  # disable gradients for effiency
+    def forward(self, x: Tensor) -> Tensor:
+        x_out = self.transforms(x)  # BxCxHxW
+        if self._apply_color_jitter:
+            x_out = self.jitter(x_out)
+        return x_out
+
 
 class MVTecDataset(Dataset):
     def __init__(self, root, transform, input_size, phase):
@@ -199,7 +229,7 @@ class STPM(pl.LightningModule):
         def hook_s(module, input, output):
             self.features_s.append(output)
 
-        self.model_t = resnet34(weights='ResNet34_Weights.DEFAULT').eval()
+        self.model_t = resnet18(weights='ResNet18_Weights.DEFAULT').eval()
         for param in self.model_t.parameters():
             param.requires_grad = False
 
@@ -221,14 +251,40 @@ class STPM(pl.LightningModule):
         self.pred_list_img_lvl = []
         self.img_path_list = []
 
+        self.transform = DataAugmentation()  # per batch augmentation_kornia
+
         self.data_transforms = transforms.Compose([
                         transforms.Resize((args.load_size, args.load_size), transforms.InterpolationMode.LANCZOS),
                         transforms.ToTensor(),
-                        transforms.CenterCrop(args.input_size),
-                        transforms.Normalize(mean=mean_train,
-                                            std=std_train)])
+                        transforms.CenterCrop(args.input_size) ])#,
+                        #transforms.Normalize(mean=mean_train,
+                        #                    std=std_train)])
         self.inv_normalize = transforms.Normalize(mean=[-0.485/0.229, -0.456/0.224, -0.406/0.255], std=[1/0.229, 1/0.224, 1/0.255])
 
+
+
+    def show_batch(self, win_size=(10, 10)):
+        def _to_vis(data):
+            return tensor_to_image(make_grid(data, nrow=8))
+
+        # get a batch from the training set: try with `val_datlaoader` :)
+        print("dbuuug", len(next(iter(self.train_dataloader()))))
+        imgs, labels, _, _, _ = next(iter(self.train_dataloader()))
+        print(imgs.shape)
+        imgs_aug = self.transform(imgs)  # apply transforms
+        # use matplotlib to visualize
+        plt.figure(figsize=win_size)
+        plt.imshow(_to_vis(imgs))
+        plt.savefig('img_before_augment.png',  bbox_inches='tight')
+        plt.figure(figsize=win_size)
+        plt.imshow(_to_vis(imgs_aug))
+        plt.savefig('img_augment.png', bbox_inches='tight')
+
+    def on_after_batch_transfer(self, batch, dataloader_idx):
+        x, gt, label, file_name, x_type = batch
+        if self.trainer.training:
+            x = self.transform(x)  # => we perform GPU/Batched data augmentation
+        return x, gt, label, file_name, x_type
 
     def init_features(self):
         self.features_t = []
@@ -382,10 +438,10 @@ class STPM(pl.LightningModule):
 
 def get_args():
     parser = argparse.ArgumentParser(description='ANOMALYDETECTION')
-    parser.add_argument('--phase', choices=['train','test'], default='train')
+    parser.add_argument('--phase', choices=['train','test', 'augment'], default='train')
     parser.add_argument('--dataset_path', default=r'data') #/tile') #'D:\Dataset\REVIEW_BOE_HKC_WHTM\REVIEW_for_anomaly\HKC'
     parser.add_argument('--category', default='carpet')
-    parser.add_argument('--num_epochs', default=100)
+    parser.add_argument('--num_epochs', default=100, type=int)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--momentum', default=0.9)
     parser.add_argument('--weight_decay', default=0.0001)
@@ -424,3 +480,6 @@ if __name__ == '__main__':
             trainer.test(model)
         else:
             print('Weights file is not found!')
+    elif args.phase == 'augment':
+        model = STPM(hparams=args)
+        model.show_batch(win_size=(14, 14))
