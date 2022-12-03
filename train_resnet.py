@@ -448,11 +448,11 @@ def get_args():
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--load_size', default=256) # 256
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default=r'') #210605') # TODO: what is it for ?
+    parser.add_argument('--project_path', default='/content/STPM-Unet-for-industrial-anomaly-detection') #210605') # TODO: what is it for ? It is for taking the checkpoint data
     parser.add_argument('--save_src_code', default=True)
     parser.add_argument('--save_anomaly_map', default=True)
     parser.add_argument('--amap_mode', choices=['mul','sum'], default='mul')
-    parser.add_argument('--weights_file_version', type=str, default=None)
+    parser.add_argument('--weights_file_version', type=str, default='') # Put a random generator name of checkpoint version
     # parser.add_argument('--weights_file_version', type=str, default='version_1')
     args = parser.parse_args()
     return args
