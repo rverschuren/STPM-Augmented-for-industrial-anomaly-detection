@@ -31,7 +31,7 @@ from pytorch_lightning.loggers import WandbLogger
 ####
 import matplotlib.pyplot as plt
 from kornia import image_to_tensor, tensor_to_image
-from kornia.augmentation import RandomBoxBlur, Normalize, RandomAffine
+from kornia.augmentation import RandomBoxBlur, ColorJiggle, Normalize, RandomAffine
 from torch import Tensor
 ####
 
@@ -64,10 +64,10 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
 
 def auto_select_weights_file(weights_file_version):
     print()
-    version_list = glob.glob(args.project_path + '/STPM/')
+    version_list = glob.glob(os.path.join(args.project_path, args.category) + '/lightning_logs/version_*')
     version_list.sort(reverse=True, key=lambda x: os.path.getmtime(x))
     if weights_file_version != None:
-        version_list = [args.project_path + '/STPM/' + weights_file_version]
+        version_list = [os.path.join(args.project_path, args.category) + '/lightning_logs/' + weights_file_version] + version_list
     for i in range(len(version_list)):
         # if os.path.exists(os.path.join(version_list[i],'checkpoints')):
         weights_file_path = glob.glob(os.path.join(version_list[i],'checkpoints')+'/*')
@@ -101,6 +101,7 @@ class DataAugmentation(nn.Module):
         self.transforms = nn.Sequential(
             RandomBoxBlur(kernel_size=(3, 3), border_type='reflect', p=0.75),
             RandomAffine(degrees=45.0, scale=(1,2), padding_mode=2, p=.75),
+            ColorJiggle(0.1, 0.1, 0.1, 0.1, p=1.),
             Normalize(mean=mean_train, std=std_train)
         )
 
@@ -446,11 +447,11 @@ def get_args():
     parser.add_argument('--batch_size', default=32)
     parser.add_argument('--load_size', default=256) # 256
     parser.add_argument('--input_size', default=256)
-    parser.add_argument('--project_path', default='/content/STPM-Unet-for-industrial-anomaly-detection') #210605') # TODO: what is it for ? It is for taking the checkpoint data
+    parser.add_argument('--project_path', default=r'') #210605') # TODO: what is it for ?
     parser.add_argument('--save_src_code', default=True)
     parser.add_argument('--save_anomaly_map', default=True)
     parser.add_argument('--amap_mode', choices=['mul','sum'], default='mul')
-    parser.add_argument('--weights_file_version', type=str, default='') # Put a random generator name of checkpoint version
+    parser.add_argument('--weights_file_version', type=str, default=None)
     # parser.add_argument('--weights_file_version', type=str, default='version_1')
     args = parser.parse_args()
     return args
