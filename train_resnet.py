@@ -99,7 +99,12 @@ class DataAugmentation(nn.Module):
         self._apply_color_jitter = apply_color_jitter
 
         self.transforms = nn.Sequential(
-            RandomBoxBlur(kernel_size=(3, 3), border_type='reflect', p=0.75),
+            RandomBoxBlur(kernel_size=(2,2), border_type='reflect', p=0.2),
+            RandomBoxBlur(kernel_size=(3,3), border_type='reflect', p=0.2),
+            RandomBoxBlur(kernel_size=(5,5), border_type='reflect', p=0.2),
+            RandomBoxBlur(kernel_size=(7,7), border_type='reflect', p=0.2),
+            RandomBoxBlur(kernel_size=(5,5), border_type='reflect', p=0.2),
+            RandomBoxBlur(kernel_size=(15,15), border_type='reflect', p=0.1),
             RandomAffine(degrees=45.0, scale=(1,2), padding_mode=2, p=.75),
             ColorJiggle(0.1, 0.1, 0.1, 0.1, p=1.),
             Normalize(mean=mean_train, std=std_train)
