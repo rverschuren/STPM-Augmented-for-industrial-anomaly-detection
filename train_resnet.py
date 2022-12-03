@@ -31,6 +31,8 @@ from pytorch_lightning.loggers import WandbLogger
 ####
 import matplotlib.pyplot as plt
 from kornia import image_to_tensor, tensor_to_image
+from kornia.augmentation import RandomBoxBlur, ColorJitter, Normalize
+from torch import Tensor
 ####
 
 def copy_files(src, dst, ignores=[]):
@@ -88,6 +90,29 @@ def auto_select_weights_file(weights_file_version):
 mean_train = [0.485, 0.456, 0.406]
 std_train = [0.229, 0.224, 0.225]
 
+
+class DataAugmentation(nn.Module):
+    """Module to perform data augmentation using Kornia on torch tensors."""
+
+    def __init__(self, apply_color_jitter: bool = False) -> None:
+        super().__init__()
+        self._apply_color_jitter = apply_color_jitter
+
+        self.transforms = nn.Sequential(
+            RandomBoxBlur(kernel_size=(3, 3), border_type='reflect', p=0.75),
+            Normalize(mean=mean_train, std=std_train)
+        )
+
+        self.jitter = ColorJitter(0.5, 0.5, 0.5, 0.5)
+
+    @torch.no_grad()  # disable gradients for effiency
+    def forward(self, x: Tensor) -> Tensor:
+        x_out = self.transforms(x)  # BxCxHxW
+        if self._apply_color_jitter:
+            x_out = self.jitter(x_out)
+        return x_out
+
+
 class MVTecDataset(Dataset):
     def __init__(self, root, transform, input_size, phase):
         if phase=='train':
@@ -136,8 +161,7 @@ class MVTecDataset(Dataset):
     def __getitem__(self, idx):
         img_path, gt, label, img_type = self.img_paths[idx], self.gt_paths[idx], self.labels[idx], self.types[idx]
         img = Image.open(img_path).convert('RGB')
-        img = self.
-        (img)
+        img = self.transform(img)
         if gt == 0:
             gt = torch.zeros([1, self.input_size, self.input_size])
         else:
@@ -226,13 +250,17 @@ class STPM(pl.LightningModule):
         self.pred_list_img_lvl = []
         self.img_path_list = []
 
+        self.transform = DataAugmentation()  # per batch augmentation_kornia
+
         self.data_transforms = transforms.Compose([
                         transforms.Resize((args.load_size, args.load_size), transforms.InterpolationMode.LANCZOS),
                         transforms.ToTensor(),
-                        transforms.CenterCrop(args.input_size),
-                        transforms.Normalize(mean=mean_train,
-                                            std=std_train)])
+                        transforms.CenterCrop(args.input_size) ])#,
+                        #transforms.Normalize(mean=mean_train,
+                        #                    std=std_train)])
         self.inv_normalize = transforms.Normalize(mean=[-0.485/0.229, -0.456/0.224, -0.406/0.255], std=[1/0.229, 1/0.224, 1/0.255])
+
+
 
     def show_batch(self, win_size=(10, 10)):
         def _to_vis(data):
@@ -242,13 +270,20 @@ class STPM(pl.LightningModule):
         print("dbuuug", len(next(iter(self.train_dataloader()))))
         imgs, labels, _, _, _ = next(iter(self.train_dataloader()))
         print(imgs.shape)
-        #imgs_aug = self.transform(imgs)  # apply transforms
+        imgs_aug = self.transform(imgs)  # apply transforms
         # use matplotlib to visualize
         plt.figure(figsize=win_size)
         plt.imshow(_to_vis(imgs))
-        plt.savefig('batch_samples.png',  bbox_inches='tight')
-        #plt.figure(figsize=win_size)
-        #plt.savefig('img_augment.png')
+        plt.savefig('img_before_augment.png',  bbox_inches='tight')
+        plt.figure(figsize=win_size)
+        plt.imshow(_to_vis(imgs_aug))
+        plt.savefig('img_augment.png', bbox_inches='tight')
+
+    def on_after_batch_transfer(self, batch, dataloader_idx):
+        x, gt, label, file_name, x_type = batch
+        if self.trainer.training:
+            x = self.transform(x)  # => we perform GPU/Batched data augmentation
+        return x, gt, label, file_name, x_type
 
     def init_features(self):
         self.features_t = []
