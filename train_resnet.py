@@ -31,7 +31,7 @@ from pytorch_lightning.loggers import WandbLogger
 ####
 import matplotlib.pyplot as plt
 from kornia import image_to_tensor, tensor_to_image
-from kornia.augmentation import RandomBoxBlur, ColorJitter, Normalize
+from kornia.augmentation import RandomBoxBlur, Normalize, RandomAffine
 from torch import Tensor
 ####
 
@@ -100,10 +100,9 @@ class DataAugmentation(nn.Module):
 
         self.transforms = nn.Sequential(
             RandomBoxBlur(kernel_size=(3, 3), border_type='reflect', p=0.75),
+            RandomAffine(degrees=45.0, scale=(1,2), padding_mode=2, p=.75),
             Normalize(mean=mean_train, std=std_train)
         )
-
-        self.jitter = ColorJitter(0.5, 0.5, 0.5, 0.5)
 
     @torch.no_grad()  # disable gradients for effiency
     def forward(self, x: Tensor) -> Tensor:
