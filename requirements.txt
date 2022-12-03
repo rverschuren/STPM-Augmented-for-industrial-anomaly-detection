@@ -6,3 +6,4 @@ pytorch-lightning
 torchmetrics
 click
 wandb
+kornia
