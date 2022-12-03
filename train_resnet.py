@@ -19,6 +19,7 @@ import glob
 import shutil
 import time
 from torchvision.models import resnet18
+from torchvision.models import resnet34
 from PIL import Image
 from sklearn.metrics import roc_auc_score
 from torch import nn
@@ -198,7 +199,7 @@ class STPM(pl.LightningModule):
         def hook_s(module, input, output):
             self.features_s.append(output)
 
-        self.model_t = resnet18(weights='ResNet18_Weights.DEFAULT').eval()
+        self.model_t = resnet34(weights='ResNet34_Weights.DEFAULT').eval()
         for param in self.model_t.parameters():
             param.requires_grad = False
 
