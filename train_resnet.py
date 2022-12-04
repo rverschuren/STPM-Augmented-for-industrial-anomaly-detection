@@ -420,13 +420,13 @@ class STPM(pl.LightningModule):
 
     def test_epoch_end(self, outputs):
         print("Total pixel-level auc-roc score :")
-        pixel_auc = roc_auc_score(self.gt_list_px_lvl, self.pred_list_px_lvl)
+        pixel_auc = roc_auc_score(self.gt_list_px_lvl, self.pred_list_px_lvl, average='weighted')
         #wandb.log({"roc_pixel_level" : wandb.plot.roc_curve( self.gt_list_px_lvl, self.pred_list_px_lvl)})
         #wandb.log({"prec_recall_pixel_level":wandb.plot.pr_curve(self.gt_list_px_lvl, self.pred_list_px_lvl, labels=None, classes_to_plot=None)})
 
         print(pixel_auc)
         print("Total image-level auc-roc score :")
-        img_auc = roc_auc_score(self.gt_list_img_lvl, self.pred_list_img_lvl)
+        img_auc = roc_auc_score(self.gt_list_img_lvl, self.pred_list_img_lvl, average='weighted')
         print(img_auc)
         print('test_epoch_end')
         values = {'pixel_auc': pixel_auc, 'img_auc': img_auc}
