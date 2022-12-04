@@ -33,6 +33,7 @@ import matplotlib.pyplot as plt
 from kornia import image_to_tensor, tensor_to_image
 from kornia.augmentation import RandomBoxBlur, ColorJiggle, Normalize, RandomAffine
 from torch import Tensor
+import wandb
 ####
 
 def copy_files(src, dst, ignores=[]):
@@ -214,6 +215,10 @@ def cal_confusion_matrix(y_true, y_pred_no_thresh, thresh, img_path_list):
                 false_n.append(img_path_list[i])
 
     cm = confusion_matrix(y_true, pred_thresh)
+    wandb.sklearn.plot_confusion_matrix(y_true, pred_thresh) 
+    #wandb.log({"roc_img_level" : wandb.plot.roc_curve(np.squeeze(np.asarray(y_true)), np.squeeze(np.asarray(pred_thresh)))})
+    #wandb.log({"prec_recall_img_level":wandb.plot.pr_curve(y_true, pred_thresh)})
+
     print(cm)
     print('false positive')
     print(false_p)
@@ -416,12 +421,17 @@ class STPM(pl.LightningModule):
     def test_epoch_end(self, outputs):
         print("Total pixel-level auc-roc score :")
         pixel_auc = roc_auc_score(self.gt_list_px_lvl, self.pred_list_px_lvl)
+        #wandb.log({"roc_pixel_level" : wandb.plot.roc_curve( self.gt_list_px_lvl, self.pred_list_px_lvl)})
+        #wandb.log({"prec_recall_pixel_level":wandb.plot.pr_curve(self.gt_list_px_lvl, self.pred_list_px_lvl, labels=None, classes_to_plot=None)})
+
         print(pixel_auc)
         print("Total image-level auc-roc score :")
         img_auc = roc_auc_score(self.gt_list_img_lvl, self.pred_list_img_lvl)
         print(img_auc)
         print('test_epoch_end')
         values = {'pixel_auc': pixel_auc, 'img_auc': img_auc}
+        wandb.run.summary["pixel_auc"] = pixel_auc
+        wandb.run.summary["img_auc"] = img_auc
         self.log_dict(values)
         # 값 분리
         anomaly_list = []
@@ -434,10 +444,11 @@ class STPM(pl.LightningModule):
 
         # thresholding
         cal_confusion_matrix(self.gt_list_img_lvl, self.pred_list_img_lvl, img_path_list = self.img_path_list, thresh = 0.00097)
+        #wandb.sklearn.plot_confusion_matrix(self.gt_list_img_lvl, self.pred_list_img_lvl, nb.classes_) 
         print()
-        with open(args.project_path + r'results.txt', 'a') as f:
-            f.write(self.logger.log_dir + '\n')
-            f.write(args.category + ' : ' + str(values) + '\n')
+        #with open(args.project_path + r'results.txt', 'a') as f:
+            #f.write(self.logger.log_dir + '\n')
+            #f.write(args.category + ' : ' + str(values) + '\n')
 
 
 def get_args():
