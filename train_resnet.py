@@ -31,7 +31,7 @@ from pytorch_lightning.loggers import WandbLogger
 ####
 import matplotlib.pyplot as plt
 from kornia import image_to_tensor, tensor_to_image
-from kornia.augmentation import RandomBoxBlur, ColorJiggle, Normalize, RandomAffine
+from kornia.augmentation import RandomBoxBlur, ColorJiggle, Normalize, RandomAffine, CenterCrop, Resize
 from torch import Tensor
 import wandb
 ####
@@ -102,13 +102,12 @@ class DataAugmentation(nn.Module):
         self.transforms = nn.Sequential(
             RandomBoxBlur(kernel_size=(2,2), border_type='reflect', p=0.2),
             RandomBoxBlur(kernel_size=(3,3), border_type='reflect', p=0.2),
-            RandomBoxBlur(kernel_size=(5,5), border_type='reflect', p=0.2),
-            RandomBoxBlur(kernel_size=(7,7), border_type='reflect', p=0.2),
-            RandomBoxBlur(kernel_size=(5,5), border_type='reflect', p=0.2),
-            RandomBoxBlur(kernel_size=(15,15), border_type='reflect', p=0.1),
-            RandomAffine(degrees=45.0, scale=(1,2), padding_mode=2, p=.75),
-            ColorJiggle(0.1, 0.1, 0.1, 0.1, p=1.),
-            Normalize(mean=mean_train, std=std_train)
+            #RandomBoxBlur(kernel_size=(5,5), border_type='reflect', p=0.2),
+            #RandomBoxBlur(kernel_size=(7,7), border_type='reflect', p=0.2),
+            #RandomBoxBlur(kernel_size=(5,5), border_type='reflect', p=0.2),
+            #RandomBoxBlur(kernel_size=(15,15), border_type='reflect', p=0.1),
+            #RandomAffine(degrees=45.0, scale=(1,2), padding_mode=2, p=.75),
+            #ColorJiggle(0.1, 0.1, 0.1, 0.1, p=1.),
         )
 
     @torch.no_grad()  # disable gradients for effiency
@@ -120,7 +119,7 @@ class DataAugmentation(nn.Module):
 
 
 class MVTecDataset(Dataset):
-    def __init__(self, root, transform, input_size, phase):
+    def __init__(self, root, transform=None, input_size=None, phase=None):
         if phase=='train':
             self.img_path = os.path.join(root, 'train')
         else:
@@ -265,9 +264,9 @@ class STPM(pl.LightningModule):
         self.data_transforms = transforms.Compose([
                         transforms.Resize((args.load_size, args.load_size), transforms.InterpolationMode.LANCZOS),
                         transforms.ToTensor(),
-                        transforms.CenterCrop(args.input_size) ])#,
-                        #transforms.Normalize(mean=mean_train,
-                        #                    std=std_train)])
+                        transforms.CenterCrop(args.input_size),
+                        transforms.Normalize(mean=mean_train,
+                                            std=std_train)])
         self.inv_normalize = transforms.Normalize(mean=[-0.485/0.229, -0.456/0.224, -0.406/0.255], std=[1/0.229, 1/0.224, 1/0.255])
 
 
