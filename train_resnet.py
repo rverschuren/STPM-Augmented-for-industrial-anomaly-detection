@@ -214,13 +214,13 @@ def cal_confusion_matrix(y_true, y_pred_no_thresh, thresh, img_path_list):
                 false_n.append(img_path_list[i])
 
     cm = confusion_matrix(y_true, pred_thresh)
-    wandb.sklearn.plot_confusion_matrix(y_true, pred_thresh) 
+    wandb.sklearn.plot_confusion_matrix(pred_thresh, y_true) 
     #wandb.log({"roc_img_level" : wandb.plot.roc_curve(np.squeeze(np.asarray(y_true)), np.squeeze(np.asarray(pred_thresh)))})
     #wandb.log({"prec_recall_img_level":wandb.plot.pr_curve(y_true, pred_thresh)})
     dpred = np.asarray(y_pred_no_thresh)
-    binary_encoded = np.where(dpred < 0.00097, 1, 0)
-    false_positives = np.logical_and(binary_encoded, np.logical_not(y_true))
-    arr = dpred[false_positives]
+    binary_encoded = np.where(dpred > thresh, 1, 0)
+    false_negative = np.logical_not(np.logical_and(binary_encoded, y_true))
+    arr = dpred[false_negative]
     print("Mean:", np.mean(arr))
     print("Median:", np.median(arr))
     print("Max:", np.max(arr))
