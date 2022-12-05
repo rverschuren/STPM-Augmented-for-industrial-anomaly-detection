@@ -484,6 +484,7 @@ if __name__ == '__main__':
         model = STPM(hparams=args)
         trainer.fit(model)
         trainer.test(model)
+        wandb.save(model)
     elif args.phase == 'test':
         # selet weights file.
         weights_file_path = auto_select_weights_file(args.weights_file_version) # auto select if args.weights_file_version == None
