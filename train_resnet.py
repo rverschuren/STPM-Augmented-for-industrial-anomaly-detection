@@ -217,7 +217,14 @@ def cal_confusion_matrix(y_true, y_pred_no_thresh, thresh, img_path_list):
     wandb.sklearn.plot_confusion_matrix(y_true, pred_thresh) 
     #wandb.log({"roc_img_level" : wandb.plot.roc_curve(np.squeeze(np.asarray(y_true)), np.squeeze(np.asarray(pred_thresh)))})
     #wandb.log({"prec_recall_img_level":wandb.plot.pr_curve(y_true, pred_thresh)})
-
+    dpred = np.asarray(y_pred_no_thresh)
+    binary_encoded = np.where(dpred < 0.00097, 1, 0)
+    false_positives = np.logical_and(binary_encoded, np.logical_not(y_true))
+    arr = dpred[false_positives]
+    print("Mean:", np.mean(arr))
+    print("Median:", np.median(arr))
+    print("Max:", np.max(arr))
+    print("Min:", np.min(arr))
     print(cm)
     print('false positive')
     print(false_p)
@@ -467,6 +474,7 @@ def get_args():
     parser.add_argument('--save_anomaly_map', default=True)
     parser.add_argument('--amap_mode', choices=['mul','sum'], default='mul')
     parser.add_argument('--weights_file_version', type=str, default='') # Put a random generator name of checkpoint version
+    parser.add_argument('--from_wandb_run', type=str, default=None)
     # parser.add_argument('--weights_file_version', type=str, default='version_1')
     args = parser.parse_args()
     return args
@@ -484,7 +492,7 @@ if __name__ == '__main__':
         model = STPM(hparams=args)
         trainer.fit(model)
         trainer.test(model)
-        wandb.save(model)
+        wandb.save("model.h5")
     elif args.phase == 'test':
         # selet weights file.
         weights_file_path = auto_select_weights_file(args.weights_file_version) # auto select if args.weights_file_version == None
