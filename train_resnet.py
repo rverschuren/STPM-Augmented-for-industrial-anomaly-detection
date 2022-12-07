@@ -219,13 +219,32 @@ def cal_confusion_matrix(y_true, y_pred_no_thresh, thresh, img_path_list):
     #wandb.log({"prec_recall_img_level":wandb.plot.pr_curve(y_true, pred_thresh)})
     dpred = np.asarray(y_pred_no_thresh)
     binary_encoded = np.where(dpred > thresh, 1, 0)
-    false_negative = np.logical_not(np.logical_and(binary_encoded, y_true))
+    false_positive = np.logical_and(binary_encoded, np.logical_not(y_true))
+    false_negative = np.logical_and(np.logical_not(binary_encoded), y_true)
+    
+
     arr = dpred[false_negative]
-    print("Mean:", np.mean(arr))
-    print("Median:", np.median(arr))
-    print("Max:", np.max(arr))
-    print("Min:", np.min(arr))
-    print(cm)
+    if len(arr)!= 0: 
+      print("For false negative:")
+      print("\tMean:", np.mean(arr))
+      print("\tMedian:", np.median(arr))
+      print("\tMax:", np.max(arr))
+      print("\tMin:", np.min(arr))
+      print("\tamount:", len(arr))
+    else: 
+      print("No false negative")
+
+    arr2 = dpred[false_positive]
+    if len(arr2) != 0:
+      print("For false positive:")
+      print("\tMean:", np.mean(arr2))
+      print("\tMedian:", np.median(arr2))
+      print("\tMax:", np.max(arr2))
+      print("\tMin:", np.min(arr2))
+      print("\tamount:", len(arr2))
+    else: 
+      print("No false positive")
+
     print('false positive')
     print(false_p)
     print('false negative')
@@ -449,7 +468,7 @@ class STPM(pl.LightningModule):
                 normal_list.append(self.pred_list_img_lvl[i])
 
         # thresholding
-        cal_confusion_matrix(self.gt_list_img_lvl, self.pred_list_img_lvl, img_path_list = self.img_path_list, thresh = 0.00097)
+        cal_confusion_matrix(self.gt_list_img_lvl, self.pred_list_img_lvl, img_path_list = self.img_path_list, thresh = args.thresh)
         #wandb.sklearn.plot_confusion_matrix(self.gt_list_img_lvl, self.pred_list_img_lvl, nb.classes_) 
         print()
         #with open(args.project_path + r'results.txt', 'a') as f:
@@ -463,6 +482,7 @@ def get_args():
     parser.add_argument('--dataset_path', default=r'data') #/tile') #'D:\Dataset\REVIEW_BOE_HKC_WHTM\REVIEW_for_anomaly\HKC'
     parser.add_argument('--category', default='carpet')
     parser.add_argument('--num_epochs', default=100, type=int)
+    parser.add_argument('--thresh', default=0.00097, type=float)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--momentum', default=0.9)
     parser.add_argument('--weight_decay', default=0.0001)
