@@ -19,7 +19,7 @@ import os
 import glob
 import shutil
 import time
-from torchvision.models import resnet18
+from torchvision.models import resnet18, resnet34
 from PIL import Image
 from sklearn.metrics import roc_auc_score
 from torch import nn
@@ -437,7 +437,7 @@ class STPM(pl.LightningModule):
         self.pred_list_px_lvl.extend(anomaly_map.ravel())
         self.gt_list_img_lvl.append(label.cpu().numpy()[0])
         self.pred_list_img_lvl.append(anomaly_map.max())
-        self.img_path_list.extend(file_name)
+        self.img_path_list.append(''.join(map(lambda x: str(x or ''), x_type + tuple('_') + file_name)))
         # save images
         x = self.inv_normalize(x)
         input_x = cv2.cvtColor(x.permute(0,2,3,1).cpu().numpy()[0]*255, cv2.COLOR_BGR2RGB)
@@ -481,7 +481,7 @@ def get_args():
     parser.add_argument('--phase', choices=['train','test', 'augment'], default='train')
     parser.add_argument('--dataset_path', default=r'data') #/tile') #'D:\Dataset\REVIEW_BOE_HKC_WHTM\REVIEW_for_anomaly\HKC'
     parser.add_argument('--category', default='carpet')
-    parser.add_argument('--num_epochs', default=100, type=int)
+    parser.add_argument('--num_epochs', default=50, type=int)
     parser.add_argument('--thresh', default=0.00097, type=float)
     parser.add_argument('--lr', default=0.4)
     parser.add_argument('--momentum', default=0.9)
@@ -495,7 +495,6 @@ def get_args():
     parser.add_argument('--amap_mode', choices=['mul','sum'], default='mul')
     parser.add_argument('--weights_file_version', type=str, default='') # Put a random generator name of checkpoint version
     parser.add_argument('--from_wandb_run', type=str, default=None)
-    # parser.add_argument('--weights_file_version', type=str, default='version_1')
     args = parser.parse_args()
     return args
 
