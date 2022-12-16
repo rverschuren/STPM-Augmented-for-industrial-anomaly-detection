@@ -1,5 +1,4 @@
-# STPM-Unet-for-industrial-anomaly-detection
-Comparing the effectiveness of the medical imaging UNet backbone and knowledge distillation in the field of textile anomaly detection.
+# STPM-Augmented-for-industrial-anomaly-detection
 
 ## Linked projects
 Code forked from [hcw-00/STPM_pytorch_lightning](https://github.com/hcw-00/STPM_pytorch_lightning)
